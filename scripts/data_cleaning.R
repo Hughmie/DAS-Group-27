@@ -26,3 +26,6 @@ str(data)
 colSums(is.na(data))
 data <- na.omit(data)
 str(data)
+
+# save data
+write.csv(cleaned_data, "datasets/cleaned_dataset27.csv", row.names = FALSE)
