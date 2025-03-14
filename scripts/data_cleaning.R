@@ -1,5 +1,7 @@
+library(dplyr)
+
 # load data
-data = read.csv("dataset27.csv")
+data = read.csv("datasets\\dataset27.csv")
 
 # inspect data
 str(data)
@@ -28,4 +30,4 @@ data <- na.omit(data)
 str(data)
 
 # save data
-write.csv(cleaned_data, "datasets/cleaned_dataset27.csv", row.names = FALSE)
+write.csv(data, "datasets\\cleaned_dataset27.csv", row.names = FALSE)
