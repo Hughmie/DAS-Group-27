@@ -48,3 +48,6 @@ data <- data %>%
     Nationality == "United-States" ~ "United-States", 
     TRUE ~ "Others"
   ))
+
+# save data
+write.csv(data, "datasets\\cleaned_dataset27_1.1.csv", row.names = FALSE)
