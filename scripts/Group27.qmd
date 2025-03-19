@@ -1,0 +1,120 @@
+---
+title: "Group_27"
+format: 
+  html:
+    embed-resources: true
+    code-tools: true
+  pdf: default
+editor: visual
+---
+
+# Stage 1: Exploratory Data Analysis (EDA)
+
+## 1. Import data and packages
+
+```{r}
+#| message: false
+library(dplyr)
+library(ggplot2)
+library(janitor)
+library(car)
+
+# Import dataset
+clean_data <- read.csv("C:\\Users\\ROG\\Documents\\cleaned_dataset27_1.1.csv") 
+```
+
+## 2. Check data structure and summary statistics
+
+```{r}
+#| message: false
+# Check structure
+str(clean_data)
+
+# Summary statistics
+summary(clean_data)
+```
+
+## 3. Clean data: Remove missing values and update column types
+
+```{r}
+#| message: false
+# Remove missing values
+cleaned_data <- na.omit(clean_data) 
+row.names(cleaned_data) <- NULL
+
+# Convert categorical variables to factors
+cleaned_data <- cleaned_data %>% 
+  mutate(across(c(Education, Marital_Status, Occupation, Sex, Nationality), as.factor))
+```
+
+## 4. Visualize the income distribution
+
+```{r}
+#| message: false
+# Bar plot for income distribution
+ggplot(cleaned_data, aes(x = Income)) + 
+  geom_bar(fill = "skyblue") +
+  labs(title = "Income Distribution", x = "Income Category", y = "Count")
+```
+
+## 5. Explore categorical variables' relationship with income
+
+```{r}
+#| message: false
+# Stacked bar plots for categorical variables
+categorical_vars <- c("Education", "Occupation", "Sex", "Marital_Status")
+
+lapply(categorical_vars, function(var) {
+  ggplot(cleaned_data, aes_string(x = var, fill = "Income")) +
+    geom_bar(position = "fill") +
+    coord_flip() +
+    labs(title = paste("Income vs", var))
+})
+```
+
+## 6. Check category balance
+
+```{r}
+#| message: false
+# Check proportion of income categories
+prop.table(table(cleaned_data$Income))
+```
+
+## 7. Establish Logistic Regression Model
+
+```{r}
+#| message: false
+# Convert Income to binary (0 = <=50K, 1 = >50K)
+cleaned_data <- cleaned_data %>%
+  mutate(Income = ifelse(Income == ">50K", 1, 0))
+
+
+# Logistic regression model
+model <- glm(Income ~ Age + Education + Marital_Status + Occupation + Sex + Hours_PW + Nationality,
+             data = cleaned_data, 
+             family = binomial(link = "logit"))
+summary(model)
+```
+
+## 8. Check for multicollinearity
+
+```{r}
+#| message: false
+# Variance Inflation Factor (VIF) test
+vif(model)
+```
+
+## 9. Visualize numeric variables against income
+
+```{r}
+#| message: false
+# Box plot for Hours per Week
+ggplot(cleaned_data, aes(x = as.factor(Income), y = Hours_PW)) +
+  geom_boxplot() +
+  labs(title = "Income vs Hours Worked per Week", x = "Income", y = "Hours per Week")
+
+# Box plot for Age
+ggplot(cleaned_data, aes(x = as.factor(Income), y = Age)) +
+  geom_boxplot() +
+  labs(title = "Income vs Age", x = "Income", y = "Age")
+```
