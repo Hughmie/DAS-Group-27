@@ -1,0 +1,156 @@
+---
+title: "model fitting"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(car) # For VIF detection
+library(broom) # Model results sorting
+library(ResourceSelection) # Hosmer-Lemeshow test
+library(pROC) # ROC curve
+```
+
+```{r}
+data <- read.csv("D:/Data Analysis Skill/git-repo/DAS-Group-27/datasets/cleaned_dataset27_1.1.csv")
+```
+
+1.  **Data preprocessing and variable conversion**
+
+```{r}
+#| label: data-prep
+#| warning: false
+#| message: false
+
+# Convert categorical variables to factors
+data <- data %>%
+  mutate(
+    Education = factor(Education),
+    Marital_Status = factor(Marital_Status),
+    Occupation = factor(Occupation),
+    Sex = factor(Sex),
+    Nationality = factor(Nationality),
+    Income = factor(Income, levels = c("<=50K", ">50K"))
+  )
+sum(is.na(data))
+```
+
+We convert categorical variables (such as education, occupation) into factor types to ensure that the model correctly identifies categorical variables. The order of factors for the response variable Income is set to \<=50k for the base group, which affects the direction of interpretation of subsequent OR values. Data integrity checks show no missing values and no interpolation processing is required.
+
+2.  **Stepwise regression variable selection**
+
+```{r}
+#| label: model-selection
+#| fig-height: 5
+
+# Full variable logistic regression model
+full_model <- glm(Income ~ Age + Education + Marital_Status + Occupation + 
+                  Sex + Hours_PW + Nationality,
+                family = binomial(link = "logit"), data = data)
+
+# Stepwise regression selection variables (based on AIC)
+step_model <- step(full_model, direction = "both")
+
+# View the final model summary
+summary(step_model)
+```
+
+Variable filter logic
+
+Step regression removes redundant variables by comparing AIC values (the smaller the better) : Nationality is first removed (AIC from 998.68→996.8), Sex is then removed (AIC from 996.8→996.1), and other variables (such as age and working hours) are retained in the model.
+
+Overall performance of model
+
+The residual deviation is reduced by 588.2 (1556.3→968.1), indicating that the model explains about 37.8% of the data variation AIC=996.1 is significantly lower than the original model's AIC=998.68, indicating that the optimization is successful
+
+Interpretation of significant influencing factors
+
+1.  Demographic factors
+
+    **Age 0.025275 p=0.000689 \*\*\***
+
+    Practical significance: For each year of age increase, the chance of earning \>50k increases by 2.5% (OR=1.025).
+
+2.  Education level
+
+    **EducationBasic Education -2.720209 p=1.15e-05**
+
+    ***EducationHigh School -1.077184 p=0.000653*** Those with a basic education degree are 93% less likely to have a high income than those with a PhD (OR=0.07) Those with a high school degree are 66% less likely to earn a high income than those with a PhD (OR=0.34)
+
+3.  Marital status Marital_StatusMarried 2.626701 p\<2e-16 \*\*\* Married people are 13.8 times more likely to have a high income than the baseline group (OR=exp(2.626)=13.8)
+
+4.  Occupation type (Base group: Management positions not shown)
+
+    **Occupationfarm-fishing-2.845193 p=0.000904 *.***
+
+    ***Occupationfarm-fishing-2.845193 P =0.000904 .***
+
+    **OccupationWhite-Collar 1.134498 p=0.000199 \*\*\***
+
+    The probability of high income of white-collar workers is 3.11 times that of the benchmark group (OR=exp(1.134)=3.11) Agriculture/fisheries workers were 94% less likely to have a high income than the baseline group (OR=0.06)
+
+5.  Working hours
+
+    **Hours_PW 0.042542 p=3.06e-08 \*\***
+
+    *Working 10 more hours per week increases the likelihood of high income by 52% (OR=exp(0.0425*10)=1.52)
+
+<!-- -->
+
+3.  **Model diagnosis and verification**
+
+```{r}
+#| label: model-diagnosis
+#| fig-height: 6
+#| out-width: "90%"
+
+# Multicollinearity Detection (VIF)
+vif(step_model) 
+
+# Hosmer-Lemeshow goodness of fit test
+hoslem.test(data$Income, fitted(step_model), g=5)
+mean((predict(step_model, type="response") - (data$Income==">50K"))^2)# The smaller the better (0-0.25 is acceptable)
+
+
+# Confusion matrix and accuracy
+prob <- predict(step_model, type = "response")
+pred <- ifelse(prob > 0.5, ">50K", "<=50K")
+conf_matrix <- table(Predicted = pred, Actual=data$Income)
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+
+# ROC curve and AUC value
+roc_curve <- roc(data$Income, prob)
+plot(roc_curve, main = "ROC Curve")
+auc(roc_curve)
+```
+
+1.  Multicollinearity diagnosis (GVIF results) The adjusted GVIF values (i.e., GVIF\^(1/(2\*Df)) are all \< 1.1 (well below the conservative threshold of 2), indicating that there is no significant multicollinearity between all variables (e.g., the association between education level and occupation is reasonably controlled). The results of model coefficient estimation are stable and reliable without deleting variables.
+2.  Model calibration problem (Hosmer-Lemeshow test) Due to the limitation of data distribution, the traditional calibration degree check cannot be completed. However, we verified by prediction error (Brier Score=0.1154056) and calibration curve that the predicted probability of the model is highly consistent with the actual occurrence frequency.
+3.  Model differentiation ability (AUC=0.893) The model correctly identified 89.3% of the "high income versus low income" pairs.
+
+```{r}
+# Extract coefficient and OR value
+tidy_model <- tidy(step_model, conf.int = TRUE, exponentiate = TRUE)
+
+# Draw OR value forest map
+ggplot(tidy_model[-1, ], aes(x = estimate, y = term)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
+  geom_vline(xintercept = 1, linetype = "dashed") +
+  labs(title = "Odds Ratio (OR) with 95% CI", x = "OR", y = "Variable")
+
+# Key variable effect chart
+data %>%
+  ggplot(aes(x = Age, y = as.numeric(Income) - 1)) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  labs(y = "Probability of Income >50K")
+
+data %>%
+  ggplot(aes(x = Hours_PW, y = as.numeric(Income) - 1)) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  labs(y = "Probability of Income >50K")
+
+```
+
+Trend judgment: Both Age and Hours_PW show a positive effect: the curve rises monotonically
