@@ -20,7 +20,7 @@ library(janitor)
 library(car)
 
 # Import dataset
-clean_data <- read.csv("C:\\Users\\ROG\\Documents\\cleaned_dataset27_1.1.csv") 
+clean_data <- read.csv("..\\datasets\\cleaned_dataset27_1.1.csv") 
 ```
 
 ## 2. Check data structure and summary statistics
