@@ -22,7 +22,6 @@ data <- data %>%
     Education %in% c("Masters", "Doctorate", "Prof-school") ~ "Advanced Education"
   ))
 
-  ))
 # merge categories in Marital_Status
 data <- data %>%
   mutate(Marital_Status = case_when(
