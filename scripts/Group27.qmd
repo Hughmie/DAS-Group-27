@@ -20,7 +20,7 @@ library(janitor)
 library(car)
 
 # Import dataset
-clean_data <- read.csv("C:\\Users\\ROG\\Documents\\cleaned_dataset27_1.1.csv") 
+clean_data <- read.csv("C:\\Users\\2980157G\\Downloads\\cleaned_dataset27_1.1.csv") 
 ```
 
 ## 2. Check data structure and summary statistics
@@ -34,30 +34,21 @@ str(clean_data)
 summary(clean_data)
 ```
 
-## 3. Clean data: Remove missing values and update column types
+The dataset contains 1376 observations with 8 variables. The data structure confirms that "Age" and "Hours_PW" are numerical, while other variables are categorical. The summary statistics show that the median age is 38, and the average work hours per week is around 41. Some extreme values are present, such as a maximum age of 90 and a maximum work hour of 99, which may require further investigation.
 
-```{r}
-#| message: false
-# Remove missing values
-cleaned_data <- na.omit(clean_data) 
-row.names(cleaned_data) <- NULL
-
-# Convert categorical variables to factors
-cleaned_data <- cleaned_data %>% 
-  mutate(across(c(Education, Marital_Status, Occupation, Sex, Nationality), as.factor))
-```
-
-## 4. Visualize the income distribution
+## 3. Visualize the income distribution
 
 ```{r}
 #| message: false
 # Bar plot for income distribution
-ggplot(cleaned_data, aes(x = Income)) + 
+ggplot(clean_data, aes(x = Income)) + 
   geom_bar(fill = "skyblue") +
   labs(title = "Income Distribution", x = "Income Category", y = "Count")
 ```
 
-## 5. Explore categorical variables' relationship with income
+The chart shows that the majority of individuals have an income of \$50K or less. This indicates a class imbalance in the target variable, which could influence the performance of classification models.
+
+## 4. Explore categorical variables' relationship with income
 
 ```{r}
 #| message: false
@@ -65,38 +56,58 @@ ggplot(cleaned_data, aes(x = Income)) +
 categorical_vars <- c("Education", "Occupation", "Sex", "Marital_Status")
 
 lapply(categorical_vars, function(var) {
-  ggplot(cleaned_data, aes_string(x = var, fill = "Income")) +
+  ggplot(clean_data, aes_string(x = var, fill = "Income")) +
     geom_bar(position = "fill") +
     coord_flip() +
     labs(title = paste("Income vs", var))
 })
 ```
 
-## 6. Check category balance
+-   **Income vs. Education**
+
+Higher education levels are associated with a higher proportion of individuals earning more than 50K. Advanced education and bachelor's degree holders have a significantly larger share of high-income earners compared to those with only basic or high school education.
+
+-   **Income vs. Occupation**
+
+White-collar and sales jobs have a higher percentage of individuals earning \>50K compared to blue-collar, service, and farming occupations. This suggests that occupation type plays a crucial role in income level.
+
+-   **Income vs. Sex**
+
+A higher percentage of males earn more than 50K compared to females. The income gap between genders suggests possible structural or occupational differences affecting earnings.
+
+-   **Income vs. Marital Status**
+
+Married individuals have a significantly higher proportion of high-income earners compared to those who are never married or divorced/separated/widowed. This could indicate that marital stability is associated with higher earnings, possibly due to dual-income households or other economic advantages.
+
+## 5. Check category balance
 
 ```{r}
 #| message: false
 # Check proportion of income categories
-prop.table(table(cleaned_data$Income))
+prop.table(table(clean_data$Income))
 ```
 
-## 7. Establish Logistic Regression Model
+The dataset is imbalanced, with about 75% of individuals earning ≤50K and 25% earning \>50K. This imbalance may affect model performance and should be considered when building predictive models.
+
+## 6. Establish Logistic Regression Model
 
 ```{r}
 #| message: false
 # Convert Income to binary (0 = <=50K, 1 = >50K)
-cleaned_data <- cleaned_data %>%
+clean_data <- clean_data %>%
   mutate(Income = ifelse(Income == ">50K", 1, 0))
 
 
 # Logistic regression model
 model <- glm(Income ~ Age + Education + Marital_Status + Occupation + Sex + Hours_PW + Nationality,
-             data = cleaned_data, 
+             data = clean_data, 
              family = binomial(link = "logit"))
 summary(model)
 ```
 
-## 8. Check for multicollinearity
+Individuals working longer hours per week tend to fall into the \>\$50K income group more frequently. This suggests a positive correlation between hours worked and income level.
+
+## 7. Check for multicollinearity
 
 ```{r}
 #| message: false
@@ -104,17 +115,27 @@ summary(model)
 vif(model)
 ```
 
-## 9. Visualize numeric variables against income
+The VIF values are all below 2, indicating that there is no significant multicollinearity among the predictors. This means the variables are not highly correlated, and no immediate adjustments are needed.
+
+## 8. Visualize numeric variables against income
 
 ```{r}
 #| message: false
 # Box plot for Hours per Week
-ggplot(cleaned_data, aes(x = as.factor(Income), y = Hours_PW)) +
+ggplot(clean_data, aes(x = as.factor(Income), y = Hours_PW)) +
   geom_boxplot() +
   labs(title = "Income vs Hours Worked per Week", x = "Income", y = "Hours per Week")
 
+```
+
+Individuals with higher income (\>50K) tend to work more hours per week on average. The median work hours are higher for this group, and there are fewer individuals working very few hours compared to the lower-income group. However, there are some outliers working extreme hours in both income groups.
+
+```{r}
+#| message: false
 # Box plot for Age
-ggplot(cleaned_data, aes(x = as.factor(Income), y = Age)) +
+ggplot(clean_data, aes(x = as.factor(Income), y = Age)) +
   geom_boxplot() +
   labs(title = "Income vs Age", x = "Income", y = "Age")
 ```
+
+Higher-income individuals tend to be older on average. The median age of the \>50K income group is higher than that of the ≤50K group. The distribution also shows a wider age range among high earners, though both groups have some outliers at older ages.
