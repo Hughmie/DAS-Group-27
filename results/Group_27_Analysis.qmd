@@ -26,18 +26,18 @@ library(pROC) # ROC curve
 
 ### 2.1 Data import 
 
-Select the raw data, remove the NA value from the data, and determine the corresponding data type. Among all variables, only Age and Hours_PW are numerical variables. The integrated data is output to 'cleaned_dataset27' for preliminary judgment of data and variables. 
+Select the raw data, remove the NA value and extra commas from the data, then determine the corresponding data type. Among all variables, only Age and Hours_PW are numerical variables. The integrated data is output to 'cleaned_dataset27' for preliminary judgment of data and variables. 
 
 ```{r}
 # load data
-data = read.csv("C:/Users/2962286z/Desktop/Group 27/dataset27.csv")
+data = read.csv("..\\datasets\\dataset27.csv")
 ```
 
 ```{r}
 # inspect data
-str(data)
-summary(data)
-sapply(data, unique)
+print(str(data))
+print(summary(data))
+print(sapply(data, unique))
 
 # delete commas
 # convert ? to NA
@@ -63,15 +63,15 @@ data <- na.omit(data)
 str(data)
 
 # save data
-write.csv(data, "C:/Users/2962286z/Desktop/Group 27/cleaned_dataset27.csv", row.names = FALSE)
+write.csv(data, "..\\datasets\\cleaned_dataset27.csv", row.names = FALSE)
 ```
 
 ### 2.2 Variable judgment 
 
-By visualizing all the variables first, you can see that there are some variables with perfectly linear relationships among the classes (for example, Preschool in Education and Priv-house-serv in Occupation). 
+By visualizing all the variables first, we can see that there are some variables with perfectly linear relationships among the classes (for example, Preschool in Education and Priv-house-serv in Occupation). 
 
 ```{r}
-clean_data <- read.csv("C:/Users/2962286z/Desktop/Group 27/cleaned_dataset27.csv")
+clean_data <- read.csv("..\\datasets\\cleaned_dataset27.csv")
 
 # Relationship between categorical variables and income
 lapply(c("Education", "Occupation", "Sex", "Marital_Status"), 
@@ -84,51 +84,53 @@ lapply(c("Education", "Occupation", "Sex", "Marital_Status"),
 
 ### 2.3 New variable handling 
 
-In order to avoid affecting the model fitting results later, we sorted and merged some data and consolidated it again into 'cleaned_dataset27_1.1.'. 
+In order to avoid affecting the model fitting results later, we sorted and merged some data in 'cleaned_dataset27_1.1'. 
 
 ```{r}
 # find the categories should be merged
-table(data$Nationality, data$Income)
-
+table(clean_data$Nationality, clean_data$Income)
 
 # merge categories in Education
-data <- data %>%
+clean_data <- clean_data %>%
   mutate(Education = case_when(
     Education %in% c("Preschool", "1st-4th", "5th-6th", "7th-8th", "9th") ~ "Basic Education",
     Education %in% c("10th", "11th", "12th", "HS-grad") ~ "High School",
     Education %in% c("Some-college", "Assoc-acdm", "Assoc-voc") ~ "College Education",
     Education == "Bachelors" ~ "Bachelors",
-    Education %in% c("Masters", "Doctorate", "Prof-school") ~ "Advanced Education"
+    Education %in% c("Masters", "Doctorate", "Prof-school") ~ "Advanced Education",
+    TRUE ~ Education
   ))
 
 # merge categories in Marital_Status
-data <- data %>%
+clean_data <- clean_data %>%
   mutate(Marital_Status = case_when(
     Marital_Status %in% c("Married-AF-spouse", "Married-civ-spouse") ~ "Married",
     Marital_Status == "Never-married" ~ "Never-married", 
-    Marital_Status %in% c("Divorced", "Married-spouse-absent", "Separated", "Widowed") ~ "Divorced/Spouse Absent/Separated/Widowed"
+    Marital_Status %in% c("Divorced", "Married-spouse-absent", "Separated", "Widowed") ~ "Divorced/Spouse Absent/Separated/Widowed",
+    TRUE ~ Marital_Status
   ))
 
 # merge categories in Occupation
-data <- data %>%
+clean_data <- clean_data %>%
   mutate(Occupation = case_when(
     Occupation %in% c("Exec-managerial", "Prof-specialty", "Tech-support") ~ "White-Collar", 
     Occupation %in% c("Craft-repair", "Machine-op-inspct", "Transport-moving") ~ "Blue-Collar", 
     Occupation %in% c("Handlers-cleaners", "Other-service", "Priv-house-serv", "Protective-serv") ~ "Service", 
     Occupation == "Adm-clerical" ~ "Adm-clerical",
     Occupation == "Sales" ~ "Sales", 
-    Occupation == "Farming-fishing" ~ "Farming-fishing"
+    Occupation == "Farming-fishing" ~ "Farming-fishing",
+    TRUE ~ Occupation
   ))
 
 # merge categories in Nationality
-data <- data %>%
+clean_data <- clean_data %>%
   mutate(Nationality = case_when(
     Nationality == "United-States" ~ "United-States", 
     TRUE ~ "Others"
   ))
 
 # save data
-write.csv(data, "C:/Users/2962286z/Desktop/Group 27/cleaned_dataset27_1.1.csv", row.names = FALSE)
+write.csv(clean_data, "..\\datasets\\cleaned_dataset27_1.1.csv", row.names = FALSE)
 ```
 
 ## 3. Exploratory Data Analysis
@@ -137,7 +139,7 @@ write.csv(data, "C:/Users/2962286z/Desktop/Group 27/cleaned_dataset27_1.1.csv", 
 
 ```{r}
 # Import dataset
-clean_data <- read.csv("C:/Users/2962286z/Desktop/Data Analysis/goup/cleaned_dataset27_1.1.csv")
+clean_data <- read.csv("..\\datasets\\cleaned_dataset27_1.1.csv")
 ```
 
 ### 3.2. Check data structure and summary statistics
@@ -151,7 +153,7 @@ str(clean_data)
 summary(clean_data)
 ```
 
-The dataset contains 1376 observations with 8 variables. The data structure confirms that "Age" and "Hours_PW" are numerical, while other variables are categorical. The summary statistics show that the median age is 38, and the average work hours per week is around 41. Some extreme values are present, such as a maximum age of 90 and a maximum work hour of 99, which may require further investigation.
+The cleaned dataset contains 1376 observations with 8 variables. The data structure confirms that "Age" and "Hours_PW" are numerical, while other variables are categorical. The summary statistics show that the median age is 38, and the average work hours per week is around 41. Some extreme values are present, such as a maximum age of 90 and a maximum work hour of 99, which may require further process.
 
 ### 3.3. Visualize the income distribution
 
@@ -182,19 +184,19 @@ lapply(categorical_vars, function(var) {
 
 -   **Income vs. Education**
 
-Higher education levels are associated with a higher proportion of individuals earning more than 50K. Advanced education and bachelor's degree holders have a significantly larger share of high-income earners compared to those with only basic or high school education.
+Higher education levels are associated with a higher proportion of individuals earning more than 50K. Advanced education and Bachelor's degree holders have a significantly larger share of high-income earners compared to those with only basic or high school education.
 
 -   **Income vs. Occupation**
 
-White-collar and sales jobs have a higher percentage of individuals earning \>50K compared to blue-collar, service, and farming occupations. This suggests that occupation type plays a crucial role in income level.
+White-collar and sales jobs have a higher percentage of individuals earning \>50K compared to blue-collar, service, and farming-fishing occupations. This suggests that occupation type plays a crucial role in income level.
 
 -   **Income vs. Sex**
 
-A higher percentage of males earn more than 50K compared to females. The income gap between genders suggests possible structural or occupational differences affecting earnings.
+A higher percentage of males earn more than 50K compared to females. The income gap suggests that there might be gender differences in income.
 
 -   **Income vs. Marital Status**
 
-Married individuals have a significantly higher proportion of high-income earners compared to those who are never married or divorced/separated/widowed. This could indicate that marital stability is associated with higher earnings, possibly due to dual-income households or other economic advantages.
+Married individuals have a significantly higher proportion of high-income earners compared to those who are never married or divorced/separated/widowed. This could indicate that marital stability is associated with higher earnings.
 
 ### 3.5. Check category balance
 
@@ -259,7 +261,7 @@ Higher-income individuals tend to be older on average. The median age of the \>5
 ## 4. Model fitting
 
 ```{r}
-data <- read.csv("C:/Users/2962286z/Desktop/Data Analysis/goup/cleaned_dataset27_1.1.csv")
+data <- read.csv("..\\datasets\\cleaned_dataset27_1.1.csv")
 ```
 
 ### **4.1. Data preprocessing and variable conversion**
@@ -307,15 +309,15 @@ Step regression removes redundant variables by comparing AIC values (the smaller
 
 Overall performance of model
 
-The residual deviation is reduced by 588.2 (1556.3→968.1), indicating that the model explains about 37.8% of the data variation AIC=996.1 is significantly lower than the original model's AIC=998.68, indicating that the optimization is successful
+The residual deviation is reduced by 588.2 (1556.3→968.1), indicating that the modelreduces 38% of residual deviance compared to the null model. AIC=996.1 is significantly lower than the original model's AIC=998.68, indicating that the op
 
 Interpretation of significant influencing factors
 
-1.  Demographic factors
+1.  Age
 
     **Age 0.025275 p=0.000689 \*\*\***
 
-    Practical significance: For each year of age increase, the chance of earning \>50k increases by 2.5% (OR=1.025).
+    Practical significance: For each year of age increase, the odds of earning \>50k increases by 2.5% (OR=1.025).
 
 2.  Education level
 
@@ -323,9 +325,11 @@ Interpretation of significant influencing factors
 
     ***EducationHigh School -1.077184 p=0.000653***
 
-    Those with a basic education degree are 93% less likely to have a high income than those with a PhD (OR=0.07) Those with a high school degree are 66% less likely to earn a high income than those with a PhD (OR=0.34)
+    Those with a basic education degree are 93% less likely to have a high income than those with an advanced degree (OR=0.07) Those with a high school degree are 66% less likely to earn a high income than those with an advanced degree (OR=0.34)
 
-3.  Marital status Marital_StatusMarried 2.626701 p\<2e-16 \*\*\* Married people are 13.8 times more likely to have a high income than the baseline group (OR=exp(2.626)=13.8)
+3.  Marital status
+
+    Marital_StatusMarried 2.626701 p\<2e-16 \*\*\* Married people are 13.8 times more likely to have a high income than the baseline group (OR=exp(2.626)=13.8)
 
 4.  Occupation type (Base group: Management positions not shown)
 
@@ -337,11 +341,11 @@ Interpretation of significant influencing factors
 
     The probability of high income of white-collar workers is 3.11 times that of the benchmark group (OR=exp(1.134)=3.11) Agriculture/fisheries workers were 94% less likely to have a high income than the baseline group (OR=0.06)
 
-Working hours
+5.  Working hours
 
 **Hours_PW 0.042542 p=3.06e-08 \*\***
 
-*Working 10 more hours per week increases the likelihood of high income by 52% (OR=exp(0.0425*10)=1.52)
+Working 10 more hours per week increases the likelihood of high income by 52% (OR=1.52)
 
 ### **4.3. Model diagnosis and verification**
 
