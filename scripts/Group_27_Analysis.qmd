@@ -8,7 +8,7 @@ Group 27
 
 ## 1. Introduction
 
-Income inequality remains a critical socioeconomic challenge. This study analyzes the 1994 US Census dataset using a generalized linear model (GLM) to identify key factors—such as age, education, occupation, and work hours—that significantly predict whether an individual earns over \$50k annually. The results aim to inform targeted policy interventions for improving economic equity.
+Income inequality remains a critical socioeconomic challenge. This study analyzes the 1994 US Census dataset using a Generalized Linear Model (GLM) to identify key factors—such as age, education, occupation, and work hours—that significantly predict whether an individual earns over \$50k annually. The results aim to inform targeted policy interventions for improving economic equity.
 
 ```{r}
 library(dplyr)
@@ -30,7 +30,7 @@ Select the raw data, remove the NA value from the data, and determine the corres
 
 ```{r}
 # load data
-data = read.csv("..\\datasets\\dataset27.csv")
+data = read.csv("C:/Users/2962286z/Desktop/Group 27/dataset27.csv")
 ```
 
 ```{r}
@@ -63,8 +63,7 @@ data <- na.omit(data)
 str(data)
 
 # save data
-write.csv(data, "..\\datasets\\cleaned_dataset27.csv", 
-          row.names = FALSE)
+write.csv(data, "C:/Users/2962286z/Desktop/Group 27/cleaned_dataset27.csv", row.names = FALSE)
 ```
 
 ### 2.2 Variable judgment 
@@ -72,7 +71,7 @@ write.csv(data, "..\\datasets\\cleaned_dataset27.csv",
 By visualizing all the variables first, you can see that there are some variables with perfectly linear relationships among the classes (for example, Preschool in Education and Priv-house-serv in Occupation). 
 
 ```{r}
-clean_data <- read.csv("..\\datasets\\cleaned_dataset27.csv")
+clean_data <- read.csv("C:/Users/2962286z/Desktop/Group 27/cleaned_dataset27.csv")
 
 # Relationship between categorical variables and income
 lapply(c("Education", "Occupation", "Sex", "Marital_Status"), 
@@ -89,11 +88,11 @@ In order to avoid affecting the model fitting results later, we sorted and merge
 
 ```{r}
 # find the categories should be merged
-table(clean_data$Nationality, clean_data$Income)
+table(data$Nationality, data$Income)
 
 
 # merge categories in Education
-clean_data <- clean_data %>%
+data <- data %>%
   mutate(Education = case_when(
     Education %in% c("Preschool", "1st-4th", "5th-6th", "7th-8th", "9th") ~ "Basic Education",
     Education %in% c("10th", "11th", "12th", "HS-grad") ~ "High School",
@@ -103,7 +102,7 @@ clean_data <- clean_data %>%
   ))
 
 # merge categories in Marital_Status
-clean_data <- clean_data %>%
+data <- data %>%
   mutate(Marital_Status = case_when(
     Marital_Status %in% c("Married-AF-spouse", "Married-civ-spouse") ~ "Married",
     Marital_Status == "Never-married" ~ "Never-married", 
@@ -111,7 +110,7 @@ clean_data <- clean_data %>%
   ))
 
 # merge categories in Occupation
-clean_data <- clean_data %>%
+data <- data %>%
   mutate(Occupation = case_when(
     Occupation %in% c("Exec-managerial", "Prof-specialty", "Tech-support") ~ "White-Collar", 
     Occupation %in% c("Craft-repair", "Machine-op-inspct", "Transport-moving") ~ "Blue-Collar", 
@@ -122,15 +121,14 @@ clean_data <- clean_data %>%
   ))
 
 # merge categories in Nationality
-clean_data <- clean_data %>%
+data <- data %>%
   mutate(Nationality = case_when(
     Nationality == "United-States" ~ "United-States", 
     TRUE ~ "Others"
   ))
 
 # save data
-write.csv(clean_data, "..\\datasets\\cleaned_dataset27_1.1.csv", 
-          row.names = FALSE)
+write.csv(data, "C:/Users/2962286z/Desktop/Group 27/cleaned_dataset27_1.1.csv", row.names = FALSE)
 ```
 
 ## 3. Exploratory Data Analysis
@@ -139,7 +137,7 @@ write.csv(clean_data, "..\\datasets\\cleaned_dataset27_1.1.csv",
 
 ```{r}
 # Import dataset
-clean_data <- read.csv("..\\datasets\\cleaned_dataset27_1.1.csv")
+clean_data <- read.csv("C:/Users/2962286z/Desktop/Data Analysis/goup/cleaned_dataset27_1.1.csv")
 ```
 
 ### 3.2. Check data structure and summary statistics
@@ -208,7 +206,35 @@ prop.table(table(clean_data$Income))
 
 The dataset is imbalanced, with about 75% of individuals earning ≤50K and 25% earning \>50K. This imbalance may affect model performance and should be considered when building predictive models.
 
-### 3.6. Visualize numeric variables against income
+### 3.6. Establish Logistic Regression Model
+
+```{r}
+#| message: false
+# Convert Income to binary (0 = <=50K, 1 = >50K)
+clean_data <- clean_data %>%
+  mutate(Income = ifelse(Income == ">50K", 1, 0))
+
+
+# Logistic regression model
+model <- glm(Income ~ Age + Education + Marital_Status + Occupation + Sex + Hours_PW + Nationality,
+             data = clean_data, 
+             family = binomial(link = "logit"))
+summary(model)
+```
+
+Individuals working longer hours per week tend to fall into the \>\$50K income group more frequently. This suggests a positive correlation between hours worked and income level.
+
+### 3.7. Check for multicollinearity
+
+```{r}
+#| message: false
+# Variance Inflation Factor (VIF) test
+vif(model)
+```
+
+The VIF values are all below 2, indicating that there is no significant multicollinearity among the predictors. This means the variables are not highly correlated, and no immediate adjustments are needed.
+
+### 3.8. Visualize numeric variables against income
 
 ```{r}
 #| message: false
@@ -233,7 +259,7 @@ Higher-income individuals tend to be older on average. The median age of the \>5
 ## 4. Model fitting
 
 ```{r}
-data <- read.csv("..\\datasets\\cleaned_dataset27_1.1.csv")
+data <- read.csv("C:/Users/2962286z/Desktop/Data Analysis/goup/cleaned_dataset27_1.1.csv")
 ```
 
 ### **4.1. Data preprocessing and variable conversion**
@@ -275,51 +301,47 @@ step_model <- step(full_model, direction = "both")
 summary(step_model)
 ```
 
-**Variable filter logic:**
+Variable filter logic
 
 Step regression removes redundant variables by comparing AIC values (the smaller the better) : Nationality is first removed (AIC from 998.68→996.8), Sex is then removed (AIC from 996.8→996.1), and other variables (such as age and working hours) are retained in the model.
 
-**Overall performance of the model:**
+Overall performance of model
 
 The residual deviation is reduced by 588.2 (1556.3→968.1), indicating that the model explains about 37.8% of the data variation AIC=996.1 is significantly lower than the original model's AIC=998.68, indicating that the optimization is successful
 
 Interpretation of significant influencing factors
 
-1.  **Age**
+1.  Demographic factors
 
-    Age 0.025275 p=0.000689 \*\*\*
+    **Age 0.025275 p=0.000689 \*\*\***
 
     Practical significance: For each year of age increase, the chance of earning \>50k increases by 2.5% (OR=1.025).
 
-2.  **Education level (Baseline: Advanced Education)**
+2.  Education level
 
-    EducationBasic Education -2.720209 p=1.15e-05 \*\*\*
+    **EducationBasic Education -2.720209 p=1.15e-05**
 
-    EducationHigh School -1.077184 p=0.000653 \*\*\*
+    ***EducationHigh School -1.077184 p=0.000653***
 
-    Those with a basic education degree are 93% less likely to have a high income than those with a Advanced Education (OR=0.07) Those with a high school degree are 66% less likely to earn a high income than those with a PhD (OR=0.34)
+    Those with a basic education degree are 93% less likely to have a high income than those with a PhD (OR=0.07) Those with a high school degree are 66% less likely to earn a high income than those with a PhD (OR=0.34)
 
-3.  **Marital_Status (Base group: Single or Not married)**
+3.  Marital status Marital_StatusMarried 2.626701 p\<2e-16 \*\*\* Married people are 13.8 times more likely to have a high income than the baseline group (OR=exp(2.626)=13.8)
 
-    Married 2.626701 p\<2e-16 \*\*\*
+4.  Occupation type (Base group: Management positions not shown)
 
-    Married people are 13.8 times more likely to have a high income than the baseline group (OR=exp(2.626)=13.8)
+    **Occupationfarm-fishing-2.845193 p=0.000904 *.***
 
-4.  **Occupation type (Base group: Management)**
+    ***Occupationfarm-fishing-2.845193 P =0.000904 .***
 
-    Farm-fishing: Coefficient-2.845193 p = 0.000904 \*\*\* . It‘s less likely to earn a high income.
-
-    White-Collar: Coefficient-2.845193 P = 0.000199 \*\*\*. It‘s more likely to earn a high income.
-
-    Blue-Collar: Coefficient-0.155595, P = 0.622942. This does not significantly indicate a clear income difference from the baseline group after adjusting for other factors.
+    **OccupationWhite-Collar 1.134498 p=0.000199 \*\*\***
 
     The probability of high income of white-collar workers is 3.11 times that of the benchmark group (OR=exp(1.134)=3.11) Agriculture/fisheries workers were 94% less likely to have a high income than the baseline group (OR=0.06)
 
-5.  **Working hours per week**
+Working hours
 
-    Hours_PW 0.042542 p=3.06e-08 \*\*\*
+**Hours_PW 0.042542 p=3.06e-08 \*\***
 
-    Working 10 more hours per week increases the likelihood of high income by 52% (OR=exp(0.042510)=1.52)
+*Working 10 more hours per week increases the likelihood of high income by 52% (OR=exp(0.0425*10)=1.52)
 
 ### **4.3. Model diagnosis and verification**
 
@@ -341,7 +363,6 @@ prob <- predict(step_model, type = "response")
 pred <- ifelse(prob > 0.5, ">50K", "<=50K")
 conf_matrix <- table(Predicted = pred, Actual=data$Income)
 accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
-accuracy
 
 # ROC curve and AUC value
 roc_curve <- roc(data$Income, prob)
@@ -351,11 +372,9 @@ auc(roc_curve)
 
 1.  Multicollinearity diagnosis (GVIF results) The adjusted GVIF values (i.e., GVIF\^(1/(2\*Df)) are all \< 1.1 (well below the conservative threshold of 2), indicating that there is no significant multicollinearity between all variables (e.g., the association between education level and occupation is reasonably controlled). The results of model coefficient estimation are stable and reliable without deleting variables.
 
-2.  We assessed model calibration using the Hosmer-Lemeshow test and Brier Score. After correcting for data format, the Hosmer-Lemeshow test indicated p-value is 0.8255814 and the Brier Score was 0.115, suggesting that the predicted probabilities were reasonably well-calibrated with the observed outcomes.
+2.  Model calibration problem (Hosmer-Lemeshow test) Due to the limitation of data distribution, the traditional calibration degree check cannot be completed. However, we verified by prediction error (Brier Score=0.1154056) and calibration curve that the predicted probability of the model is highly consistent with the actual occurrence frequency.
 
 3.  Model differentiation ability (AUC=0.893) The model correctly identified 89.3% of the "high income versus low income" pairs.
-
-4.  The accuracy value of model prediction is 0.8255814, indicating that about 82.56% of the prediction is correct. However, considering the imbalance of the sample sizes between two different incomes, ROC and AUC could be conducted as further detections. The ROC curve shows the curve bending sharply toward the top-left corner, which indicates high sensitivity and specificity. The AUC is 0.89, indicating the model is effective at distinguishing between income groups.
 
     ```{r}
     # Extract coefficient and OR value
@@ -389,7 +408,7 @@ Trend judgment: Both Age and Hours_PW show a positive effect: the curve rises mo
 
 **Model Fit:** The final GLM achieved an AIC of 996.1 and residual deviance of 968.1, indicating strong explanatory power. 
 
-**Predictive Accuracy:** The AUC of 0.893 demonstrates excellent discrimination between income groups. 
+Predictive Accuracy: The AUC of 0.893 demonstrates excellent discrimination between income groups. 
 
 **Key Insight:** The model explains 37.8% of the variance in income levels (deviance reduction from 1,556.3 to 968.1). 
 
@@ -397,7 +416,7 @@ Trend judgment: Both Age and Hours_PW show a positive effect: the curve rises mo
 
 **Sex:** Gender showed no significant effect (p=0.348), suggesting income disparities in this dataset are better explained by Occupation/Education. 
 
-**Nationality:** Birth nationality was excluded during model selection (AIC-optimized), indicating its limited predictive power. 
+Nationality: Birth nationality was excluded during model selection (AIC-optimized), indicating its limited predictive power. 
 
 ### 5.3. Limitations & Future Directions
 
